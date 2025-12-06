@@ -1,8 +1,8 @@
-#include "hdr/render.hpp"
-#include "hdr/analyzer1.hpp"
-#include "hdr/analyzer2.hpp"
-#include "hdr/analyzer3.hpp"
-#include "hdr/analyzer4.hpp"
+#include "render.hpp"
+#include "analyzer1.hpp"
+#include "analyzer2.hpp"
+#include "analyzer3.hpp"
+#include "analyzer4.hpp"
 #include <iostream>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include "../include/imgui/imgui.h"

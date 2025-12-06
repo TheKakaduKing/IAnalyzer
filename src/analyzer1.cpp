@@ -1,4 +1,4 @@
-#include "hdr/analyzer1.hpp"
+#include "analyzer1.hpp"
 #include "../include/imgui/imgui.h"
 #include "../include/implot/implot.h"
 #include <cmath>

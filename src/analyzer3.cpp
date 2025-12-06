@@ -1,4 +1,4 @@
-#include "hdr/analyzer3.hpp"
+#include "analyzer3.hpp"
 #include "../include/imgui/imgui.h"
                         
 void windowAnalyzer3(ImVec2 size_, ImVec2 pos_){
