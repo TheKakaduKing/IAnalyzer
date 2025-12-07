@@ -1,19 +1,23 @@
 #include "render.hpp"
 #include "stringHandler.hpp"
 #include <iostream>
+#include <string>
 
 
 // Main code
 int main(){
   renderGLFWWindow(); 
-  // stringHandler str{"1+2*5*(s(5^25))"};
-  stringHandler stf{};
-  stringHandler str{stf.preprocess(L"-20.0(-9.0+2)/-s(5^(5-3))*3!+-1.4*-sin(-58+2)*cos(1)+tan(-3)")};
-  // stringHandler str{"5*4/2"};
-  str.tokenize();
-  // str.convertRPN();
+  std::string a = "-20.0(-9.0+2)/s(5^2)*2!+-1.4*-sin(-58)*cos(1)+tan(-3)";
+  std::wstring b = L"4n+2";
 
-  str.evalRPN(str.convertRPN());
+  // double b = stringHandler{a};
+  std::wcout << stringHandler{a} << std::endl;
+  std::vector<double> c = stringHandler{b, L'n', 0, 10, 1};
+  std::wcout << c.size() << std::endl;
+  for (double d : c) {
+    std::wcout << d << std::endl;
+  
+  }
   // str.preprocess(L"-20.0(-9.0+2)/s(5^2)*2!+n-1.4*-sin-58*cos1+tan-3");
 
 }

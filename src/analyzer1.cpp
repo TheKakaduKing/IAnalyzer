@@ -1,9 +1,7 @@
 #include "analyzer1.hpp"
 #include "../include/imgui/imgui.h"
 #include "../include/implot/implot.h"
-#include <cmath>
 #include <math.h>
-#include <iostream>
                         
 void windowAnalyzer1(ImVec2 size_, ImVec2 pos_){
 

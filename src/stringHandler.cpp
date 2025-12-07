@@ -8,27 +8,14 @@
 #include <iostream>
 #include <regex>
 
-stringHandler::stringHandler(): 
-  input_{}, 
-  tokens_{}
-{}
 
-stringHandler::stringHandler(std::wstring input): 
-  input_{input}, 
-  tokens_{}
-{}
-
-stringHandler::stringHandler(std::wstring input, wchar_t delimBegin, wchar_t delimEnd): 
-  input_{input}, 
-  tokens_{}
-{}
 
 
 // ***Preprocess the given string***
 //
-std::wstring stringHandler::preprocess(std::wstring in){
+std::wstring stringHandler::preprocess(const std::wstring& input) const{
 
-  std::wstring ws{in};
+  std::wstring ws{input};
   std::wstring wsOld{};
 
 
@@ -48,41 +35,45 @@ std::wstring stringHandler::preprocess(std::wstring in){
     std:: wregex reg53(LR"((s))", rx_);   
     ws = std:: regex_replace(ws, reg53,L"&");
 
+    // preprocess log to %
+    std:: wregex reg56(LR"((log))", rx_);   
+    ws = std:: regex_replace(ws, reg56,L"$");
+
 //  first preprocess
   while(ws != wsOld){
 
     wsOld = ws;
     // insert * between digit or n or ! and opening parentheses
-    static const std::wregex reg1(LR"(([[:digit:]]|n|!)(\())", rx_);   
+    static const std::wregex reg1(L"([[:digit:]" + std::wstring{var1_} + L"!])(\\()", rx_);   
     ws = std::regex_replace(ws, reg1, L"$1*$2");
-  
+
     // insert * between digit or closing parentheses and n
-    static const std::wregex reg2(LR"(([[:digit:]]|\))(n))", rx_);   
+    static const std::wregex reg2(L"([[:digit:]\\)])(" + std::wstring{var1_} + L")", rx_);   
     ws = std::regex_replace(ws, reg2, L"$1*$2");
-  
+
     // cut + if -+ or +-
-    std::wregex reg3(LR"(\+-|-\+)", rx_);   
+    std::wregex reg3(L"(\\+-|-\\+)", rx_);   
     ws = std::regex_replace(ws, reg3, L"-");
-  
-    // replace ++ and --
-    std::wregex reg4(LR"(\+\+|--)", rx_);   
+
+    // // replace ++ and --
+    std::wregex reg4(L"(\\+\\+|--)", rx_);   
     ws = std::regex_replace(ws, reg4, L"+");
-  
-    // cutoff + if after /, *, s, ^, (
-    std::wregex reg5(LR"((/|\*|&|\^|\()(\+)([[:digit:]]))", rx_);   
+
+    // cutoff + if after /, *,  ^, (
+    std::wregex reg5(L"([/\\*^\(])(\\+)([[:digit:]|" + std::wstring{var1_} + L"])", rx_);   
     ws = std::regex_replace(ws, reg5, L"$1$3");
-  
+
   }
    
 //  second preprocess
   
 
     // preprocess + at start of string
-    std:: wregex reg54(LR"(^\+)", rx_);   
+    std:: wregex reg54(L"(^\\+)", rx_);   
     ws = std:: regex_replace(ws, reg54,L"");
-  
-    // delimit unary - for - follow by numbers or functions
-    std:: wregex reg55(LR"((^|[^[:digit:]eEn)!])(-))", rx_);   
+
+    // // delimit unary - for - follow by numbers or functions
+    std:: wregex reg55(L"(^|[^[:digit:]eEn)!])(-)", rx_);   
     ws = std:: regex_replace(ws, reg55,L"$1" + std::wstring{prefixNeg_});
   
   
@@ -97,11 +88,12 @@ std::wstring stringHandler::preprocess(std::wstring in){
 
 // ***Tokenize the preprocessed string***
 //
-void stringHandler::tokenize(){
+std::vector<std::wstring> stringHandler::tokenize(const std::wstring& input) const{
+  std::vector<std::wstring> tokens{};
   std::wstring temp{};
   bool bNegNumber{false};
 
-  for (wchar_t c : input_) {
+  for (wchar_t c : input) {
 
     if ((std::isdigit(c) || c == L'.') || bNegNumber == true && (std::isdigit(c) || c == L'.' || (operatorMapFunc_.find(c) != operatorMapFunc_.end()))) {  // normal or negative number
       temp += c;
@@ -112,31 +104,31 @@ void stringHandler::tokenize(){
       continue;
     }
     else if (c == prefixNeg_ && bNegNumber) {
-      tokens_.push_back(temp);
+      tokens.push_back(temp);
       temp = prefixNeg_;
     }
 
     else if (c == var1_) {  
 
       if (temp != L"") {
-        tokens_.push_back(temp);
+        tokens.push_back(temp);
         temp = L"";
         bNegNumber = false;
       }
       temp += var1_;
-      tokens_.push_back(temp);
+      tokens.push_back(temp);
       temp = L"";
        
     }
 
     else if (operatorMap_.find(c) != operatorMap_.end()) {
       if (temp != L"") {
-        tokens_.push_back(temp);
+        tokens.push_back(temp);
         temp = L"";
         bNegNumber = false;
       }
 
-      tokens_.push_back(std::wstring{c});
+      tokens.push_back(std::wstring{c});
     }
     else {
       continue;
@@ -144,19 +136,20 @@ void stringHandler::tokenize(){
   }
 
   if (temp != L"") {
-    tokens_.push_back(temp);
+    tokens.push_back(temp);
     bNegNumber = false;
   }
-  for (std::wstring s : tokens_) {
-    std::wcout << s << std::endl;
-  }
+  // for (std::wstring s : tokens) {
+  //   std::wcout << s << std::endl;
+  // }
+  return tokens;
 }
 
 
 
 // ***Convert to reverse polish notation RPN***
 //
- std::deque<std::wstring> stringHandler::convertRPN(){
+ std::deque<std::wstring> stringHandler::convertRPN(const std::vector<std::wstring>& input) const{
 
   stOpRpn newOp{};
   wchar_t op{};
@@ -171,7 +164,7 @@ void stringHandler::tokenize(){
   bool unaryOnFunction{false};
 
 
-  for (std::wstring t : tokens_) {
+  for (std::wstring t : input) {
 
     if (std::regex_search(t, regOnDigit)) {
       if (t.front() == L'#') {
@@ -209,8 +202,6 @@ void stringHandler::tokenize(){
       }
       else if(!functionStack.empty()){
         functionStack.top().parentCount--;
-        std::wcout << "parent size -- "<<std::endl;
-        std::wcout << "stack top parent count: " << functionStack.top().parentCount<<std::endl;
       }
     }
     else if (operatorMap_.find(t.back()) != operatorMap_.end()) {
@@ -219,8 +210,6 @@ void stringHandler::tokenize(){
       
       if (newOp.op == L'(' && !functionStack.empty()) {
         functionStack.top().parentCount++;
-        std::wcout << "parent size ++ "<<std::endl;
-        std::wcout << "stack top parent count: " << functionStack.top().parentCount<<std::endl;
       }
 
       if (operatorStack.top().prio < newOp.prio) {
@@ -244,11 +233,11 @@ void stringHandler::tokenize(){
       operatorStack.pop();
     }
 
-  for (std::wstring w : symbolQueue) {
-    std::wcout<<w;
-  
-  }
-    std::wcout<<std::endl;
+  // for (std::wstring w : symbolQueue) {
+  //   std::wcout<<w;
+  //
+  // }
+  //   std::wcout<<std::endl;
 
   return symbolQueue;
 }
@@ -256,23 +245,19 @@ void stringHandler::tokenize(){
 
 
 // ***Evaluate RPN***
-int stringHandler::evalRPN(std::deque<std::wstring> queue){
+double stringHandler::evalRPN(std::deque<std::wstring>& queue) const{
   std::stack<double> operandStack{};
-  std::wcout << queue.front()<< std::endl;
   double val1{}, val2{}, result{};
 
   std::wregex regOnDigit(LR"([[:digit:]|n])");
   std::wregex regOnOpFunc(LR"([^[:digit:]|n])");
 
   while (!queue.empty()) {
-    std::wcout<< "New cycle..."<<std::endl;
     if (std::regex_search(queue.front(), regOnDigit)) {
       operandStack.push(std::stod(queue.front()));
-      std::wcout<< "Operand pushed: "<<operandStack.top()<<std::endl;
       queue.pop_front();
     }
     else if (std::regex_search(queue.front(), regOnOpFunc)) {
-      std::wcout<< "Operator found: "<<queue.front().back()<<std::endl;
 
       switch (queue.front().back()) { // get the "last" character of the wstring(queue element) which converts it to int... nice one
         case L'N':{
@@ -355,6 +340,13 @@ int stringHandler::evalRPN(std::deque<std::wstring> queue){
                     operandStack.push(result);
                     break;
                   }
+        case L'$':{
+                    val1 = operandStack.top();
+                    operandStack.pop();
+                    result = std::log(val1);
+                    operandStack.push(result);
+                    break;
+                  }
         case L'!':{
                     val1 = operandStack.top();
                     operandStack.pop();
@@ -366,17 +358,154 @@ int stringHandler::evalRPN(std::deque<std::wstring> queue){
                     std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
                   }
       }
-        std::wcout<< "Result pushed: "<<result<<std::endl;
         queue.pop_front();
     }
   }
+  result = operandStack.top();
 
-  return 0;
+  return result;
+}
+
+std::vector<double> stringHandler::evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const{
+  std::stack<double> operandStack{};
+  std::vector<double> resultVec{};
+  std::deque<std::wstring> orgQueue{queue};
+  
+  double val1{}, val2{}, result{};
+
+  std::wregex regOnDigit(LR"([[:digit:]|n])");
+  std::wregex regOnOpFunc(LR"([^[:digit:]|n])");
+
+  for (int n = start; n <=end; n+= inc) {
+    queue = orgQueue;
+  
+    while (!queue.empty()) {
+      //check if queue front is variable
+      if (queue.front() == std::wstring{var1_}) {
+        queue.pop_front();
+        queue.push_front(std::to_wstring(n));
+        std::wcout << "front popped" << std::endl;
+      
+      }
+      if (std::regex_search(queue.front(), regOnDigit)) {
+        operandStack.push(std::stod(queue.front()));
+        queue.pop_front();
+      }
+      else if (std::regex_search(queue.front(), regOnOpFunc)) {
+
+        switch (queue.front().back()) { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+          case L'N':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = 0.0 - val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'+':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 + val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'-':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 - val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'*':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 * val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'/':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 / val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'&':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = std::sqrt(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'^':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = std::pow(val2, val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'~':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = std::sin(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'@':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = std::cos(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'§':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = std::tan(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'$':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = std::log(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'!':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = factorial(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          default:  {
+                      std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                    }
+        }
+          queue.pop_front();
+      }
+    }
+    resultVec.push_back(operandStack.top());
+    std::wcout << "operand stack size: " << operandStack.size() << std::endl;
+    operandStack.pop();
+  }
+
+
+  return resultVec;
 }
 
 
-
-double stringHandler::factorial(double value){
+double stringHandler::factorial(double value) const{
   double result{1.0};
 
   while (value >= 1) {
