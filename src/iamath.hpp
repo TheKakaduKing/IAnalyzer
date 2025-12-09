@@ -19,7 +19,8 @@ concept supported_input = std::same_as<T, std::string> || std::same_as<T, std::w
 
 struct prepRule{
   std::wregex reg;
-  std::wstring rep;
+  std::wstring rep{L""};
+  bool inEx{false};
 };
 
 struct stOpRpn{
@@ -62,7 +63,8 @@ class iamath::baseCalc{
       {L'@', 3}, // cos
       {L'§', 3}, // tan
       {L'!', 4}, // factorial
-      {L'$', 4}, // log
+      {L'$', 4}, // ln
+      {L'€', 4}, // log10
       {L'N', 4}, // negate (unary minus)
       {L'(', 5}, {L')', 5}};
 
@@ -72,7 +74,8 @@ class iamath::baseCalc{
       {L'~', 3}, // sin
       {L'@', 3}, // cos
       {L'§', 3}, // tan
-      {L'$', 4}}; // log
+      {L'$', 4}, // ln
+      {L'€', 4}}; // log10
 };
 
 class iamath::calcInSingle : public iamath::baseCalc{

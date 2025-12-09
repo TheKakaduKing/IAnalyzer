@@ -4,50 +4,49 @@
 #include <stack>
 #include <cctype>
 #include <string>
-#include <format>
 #include <vector>
 #include <iostream>
 #include <regex>
+#include <math.h>
 
 
 // ***Preprocess the given string***
-//
 std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
 {
   static constexpr std::regex_constants::syntax_option_type rx{std::regex_constants::extended}; // To use regex extended syntax (Posix ERE)
 
+//-(2.0E1+3)n(-9.0+2)/s(5.0^2)*2!+-1.4*-sin(-1.0e-1)*cos(1)+tan(-3)
+
+  static const std::vector<prepRule> syntaxRun
+  {
+    //decimal error
+    {std::wregex(L"[^[:digit:]]\\.|\\.[^[:digit:]]", rx)},
+    //sin error
+    {std::wregex(L"(sin[^(])|(cos[^(])|(tan[^(])|(log[^(])|(ln[^(])|(sqrt[^(])", rx)},
+    // start of string
+    {std::wregex(L"^[*/).!eE^]", rx)},
+    // end of string 
+    {std::wregex(L"[^[:digit:]n!)]$", rx)},
+  };
+
   static const std::vector<prepRule> preRun
   {
-
     // preprocess sin to ~
     {std::wregex(L"(sin)", rx), L"~"},
-    // std::wregex reg50(LR"((sin))", rx_);   
-    // ws = std:: regex_replace(ws, reg50,L"~");
-    //
-    // // preprocess cos to @
+    // preprocess cos to @
     {std::wregex(L"(cos)", rx), L"@"},
-    // std:: wregex reg51(LR"((cos))", rx_);   
-    // ws = std:: regex_replace(ws, reg51,L"@");
-    //
-    // // preprocess tan to § for
+    // preprocess tan to § for
     {std::wregex(L"(tan)", rx), L"§"},
-    // std:: wregex reg52(LR"((tan))", rx_);   
-    // ws = std:: regex_replace(ws, reg52,L"§");
-    //
-    // // preprocess sqrt to &
-    {std::wregex(L"(s)", rx), L"&"},
-    // std:: wregex reg53(LR"((s))", rx_);   
-    // ws = std:: regex_replace(ws, reg53,L"&");
-    //
-    // // preprocess log to $
-    {std::wregex(L"(log)", rx), L"$"},
-    // std:: wregex reg56(LR"((log))", rx_);   
-    // ws = std:: regex_replace(ws, reg56,L"$");
+    // preprocess sqrt to &
+    {std::wregex(L"(sqrt)", rx), L"&"},
+    // preprocess ln to $
+    {std::wregex(L"(ln)", rx), L"$"},
+    // preprocess log to €
+    {std::wregex(L"(log)", rx), L"€"},
   };
 
   static const std::vector<prepRule> loopRun
   {
-
     // insert * between digit or n or ! and opening parentheses
     {std::wregex(L"([[:digit:]n!\\)])(\\()", rx), L"$1*$2"},
     // insert * between digit or closing parentheses and n
@@ -60,42 +59,25 @@ std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
     {std::wregex(L"([/\\*^\\(eE])(\\+)", rx), L"$1"},
     // preprocess + at start of string
     {std::wregex(L"(^\\+)", rx), L""},
-
-    // insert * between digit or closing parentheses and n
-    // static const std::wregex reg2(L"([[:digit:]\\)])(n)", rx_);   
-    // ws = std::regex_replace(ws, reg2, L"$1*$2");
-    //
-    // // cut + if -+ or +-
-    // std::wregex reg3(L"(\\+-|-\\+)", rx_);   
-    // ws = std::regex_replace(ws, reg3, L"-");
-    //
-    // // // replace ++ and --
-    // std::wregex reg4(L"(\\+\\+|--)", rx_);   
-    // ws = std::regex_replace(ws, reg4, L"+");
-    //
-    // // cutoff + if after /, *,  ^, (
-    // std::wregex reg5(L"([/\\*^\(])(\\+)([[:digit:]n])", rx_);   
-    // ws = std::regex_replace(ws, reg5, L"$1$3");
-
-
   };
 
 
   static const std::vector<prepRule> postRun
   {
-
     // delimit unary - for - follow by numbers or functions
     {std::wregex(L"(^|[^[:digit:]eEn\\)!])(-)", rx), L"$1N"},
-    // std:: wregex reg55(L"(^|[^[:digit:]eEn)!])(-)", rx_);   
-    // ws = std:: regex_replace(ws, reg55,L"$1#");
-    // mark scientific notations
-    // {std::wregex(L"([[:digit:]]+\\.?[[:digit:]]*[eE][+-]?[[:digit:]]+)", rx), L"$1S"},
-
   };
 
 
   std::wstring ws{input};
   std::wstring wsOld{};
+
+  for (prepRule r : syntaxRun) {
+    if(std::regex_search(ws, r.reg)){
+      return 0;
+    }
+  
+  }
 
   for (prepRule r : preRun) 
   {
@@ -116,12 +98,6 @@ std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
   {
     ws = std::regex_replace(ws, r.reg, r.rep);
   }
-
-  
-    // std::wcout << ws << std::endl;
-  
-  //----------------------------
-  // need to insert errors e.g. .n or 1. or /* etc.
 
   return ws;
 }
@@ -336,7 +312,7 @@ double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const
         case L'&':{
                     val1 = operandStack.top();
                     operandStack.pop();
-                    result = std::sqrt(val1);
+                    result = sqrt(val1);
                     operandStack.push(result);
                     break;
                   }
@@ -345,35 +321,42 @@ double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const
                     operandStack.pop();
                     val2 = operandStack.top();
                     operandStack.pop();
-                    result = std::pow(val2, val1);
+                    result = pow(val2, val1);
                     operandStack.push(result);
                     break;
                   }
         case L'~':{
                     val1 = operandStack.top();
                     operandStack.pop();
-                    result = std::sin(val1);
+                    result = sin(val1);
                     operandStack.push(result);
                     break;
                   }
         case L'@':{
                     val1 = operandStack.top();
                     operandStack.pop();
-                    result = std::cos(val1);
+                    result = cos(val1);
                     operandStack.push(result);
                     break;
                   }
         case L'§':{
                     val1 = operandStack.top();
                     operandStack.pop();
-                    result = std::tan(val1);
+                    result = tan(val1);
                     operandStack.push(result);
                     break;
                   }
         case L'$':{
                     val1 = operandStack.top();
                     operandStack.pop();
-                    result = std::log(val1);
+                    result = log(val1);
+                    operandStack.push(result);
+                    break;
+                  }
+        case L'€':{
+                    val1 = operandStack.top();
+                    operandStack.pop();
+                    result = log10(val1);
                     operandStack.push(result);
                     break;
                   }
@@ -475,7 +458,7 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
           case L'&':{
                       val1 = operandStack.top();
                       operandStack.pop();
-                      result = std::sqrt(val1);
+                      result = sqrt(val1);
                       operandStack.push(result);
                       break;
                     }
@@ -484,35 +467,42 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
                       operandStack.pop();
                       val2 = operandStack.top();
                       operandStack.pop();
-                      result = std::pow(val2, val1);
+                      result = pow(val2, val1);
                       operandStack.push(result);
                       break;
                     }
           case L'~':{
                       val1 = operandStack.top();
                       operandStack.pop();
-                      result = std::sin(val1);
+                      result = sin(val1);
                       operandStack.push(result);
                       break;
                     }
           case L'@':{
                       val1 = operandStack.top();
                       operandStack.pop();
-                      result = std::cos(val1);
+                      result = cos(val1);
                       operandStack.push(result);
                       break;
                     }
           case L'§':{
                       val1 = operandStack.top();
                       operandStack.pop();
-                      result = std::tan(val1);
+                      result = tan(val1);
                       operandStack.push(result);
                       break;
                     }
           case L'$':{
                       val1 = operandStack.top();
                       operandStack.pop();
-                      result = std::log(val1);
+                      result = log(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'€':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = log10(val1);
                       operandStack.push(result);
                       break;
                     }
