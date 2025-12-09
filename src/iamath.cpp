@@ -4,6 +4,7 @@
 #include <stack>
 #include <cctype>
 #include <string>
+#include <format>
 #include <vector>
 #include <iostream>
 #include <regex>
@@ -11,71 +12,113 @@
 
 // ***Preprocess the given string***
 //
-std::wstring iamath::calcInSingle::preprocess(const std::wstring& input) const{
+std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
+{
+  static constexpr std::regex_constants::syntax_option_type rx{std::regex_constants::extended}; // To use regex extended syntax (Posix ERE)
+
+  static const std::vector<prepRule> preRun
+  {
+
+    // preprocess sin to ~
+    {std::wregex(L"(sin)", rx), L"~"},
+    // std::wregex reg50(LR"((sin))", rx_);   
+    // ws = std:: regex_replace(ws, reg50,L"~");
+    //
+    // // preprocess cos to @
+    {std::wregex(L"(cos)", rx), L"@"},
+    // std:: wregex reg51(LR"((cos))", rx_);   
+    // ws = std:: regex_replace(ws, reg51,L"@");
+    //
+    // // preprocess tan to § for
+    {std::wregex(L"(tan)", rx), L"§"},
+    // std:: wregex reg52(LR"((tan))", rx_);   
+    // ws = std:: regex_replace(ws, reg52,L"§");
+    //
+    // // preprocess sqrt to &
+    {std::wregex(L"(s)", rx), L"&"},
+    // std:: wregex reg53(LR"((s))", rx_);   
+    // ws = std:: regex_replace(ws, reg53,L"&");
+    //
+    // // preprocess log to $
+    {std::wregex(L"(log)", rx), L"$"},
+    // std:: wregex reg56(LR"((log))", rx_);   
+    // ws = std:: regex_replace(ws, reg56,L"$");
+  };
+
+  static const std::vector<prepRule> loopRun
+  {
+
+    // insert * between digit or n or ! and opening parentheses
+    {std::wregex(L"([[:digit:]n!\\)])(\\()", rx), L"$1*$2"},
+    // insert * between digit or closing parentheses and n
+    {std::wregex(L"([[:digit:]\\)])(n)", rx), L"$1*$2"},
+    // cut + if -+ or +-
+    {std::wregex(L"(\\+-|-\\+)", rx), L"-"},
+    // replace ++ and --
+    {std::wregex(L"(\\+\\+|--)", rx), L"+"},
+    // cutoff + if after /, *,  ^, (, e, E
+    {std::wregex(L"([/\\*^\\(eE])(\\+)", rx), L"$1"},
+    // preprocess + at start of string
+    {std::wregex(L"(^\\+)", rx), L""},
+
+    // insert * between digit or closing parentheses and n
+    // static const std::wregex reg2(L"([[:digit:]\\)])(n)", rx_);   
+    // ws = std::regex_replace(ws, reg2, L"$1*$2");
+    //
+    // // cut + if -+ or +-
+    // std::wregex reg3(L"(\\+-|-\\+)", rx_);   
+    // ws = std::regex_replace(ws, reg3, L"-");
+    //
+    // // // replace ++ and --
+    // std::wregex reg4(L"(\\+\\+|--)", rx_);   
+    // ws = std::regex_replace(ws, reg4, L"+");
+    //
+    // // cutoff + if after /, *,  ^, (
+    // std::wregex reg5(L"([/\\*^\(])(\\+)([[:digit:]n])", rx_);   
+    // ws = std::regex_replace(ws, reg5, L"$1$3");
+
+
+  };
+
+
+  static const std::vector<prepRule> postRun
+  {
+
+    // delimit unary - for - follow by numbers or functions
+    {std::wregex(L"(^|[^[:digit:]eEn\\)!])(-)", rx), L"$1N"},
+    // std:: wregex reg55(L"(^|[^[:digit:]eEn)!])(-)", rx_);   
+    // ws = std:: regex_replace(ws, reg55,L"$1#");
+    // mark scientific notations
+    // {std::wregex(L"([[:digit:]]+\\.?[[:digit:]]*[eE][+-]?[[:digit:]]+)", rx), L"$1S"},
+
+  };
+
 
   std::wstring ws{input};
   std::wstring wsOld{};
 
-
-    // preprocess sin to ~
-    std:: wregex reg50(LR"((sin))", rx_);   
-    ws = std:: regex_replace(ws, reg50,L"~");
-  
-    // preprocess cos to @
-    std:: wregex reg51(LR"((cos))", rx_);   
-    ws = std:: regex_replace(ws, reg51,L"@");
-  
-    // preprocess tan to § for
-    std:: wregex reg52(LR"((tan))", rx_);   
-    ws = std:: regex_replace(ws, reg52,L"§");
-  
-    // preprocess sqrt to &
-    std:: wregex reg53(LR"((s))", rx_);   
-    ws = std:: regex_replace(ws, reg53,L"&");
-
-    // preprocess log to %
-    std:: wregex reg56(LR"((log))", rx_);   
-    ws = std:: regex_replace(ws, reg56,L"$");
-
-//  first preprocess
-  while(ws != wsOld){
-
-    wsOld = ws;
-    // insert * between digit or n or ! and opening parentheses
-    static const std::wregex reg1(L"([[:digit:]" + std::wstring{var1_} + L"!])(\\()", rx_);   
-    ws = std::regex_replace(ws, reg1, L"$1*$2");
-
-    // insert * between digit or closing parentheses and n
-    static const std::wregex reg2(L"([[:digit:]\\)])(" + std::wstring{var1_} + L")", rx_);   
-    ws = std::regex_replace(ws, reg2, L"$1*$2");
-
-    // cut + if -+ or +-
-    std::wregex reg3(L"(\\+-|-\\+)", rx_);   
-    ws = std::regex_replace(ws, reg3, L"-");
-
-    // // replace ++ and --
-    std::wregex reg4(L"(\\+\\+|--)", rx_);   
-    ws = std::regex_replace(ws, reg4, L"+");
-
-    // cutoff + if after /, *,  ^, (
-    std::wregex reg5(L"([/\\*^\(])(\\+)([[:digit:]|" + std::wstring{var1_} + L"])", rx_);   
-    ws = std::regex_replace(ws, reg5, L"$1$3");
-
+  for (prepRule r : preRun) 
+  {
+    ws = std::regex_replace(ws, r.reg, r.rep);
   }
-   
-//  second preprocess
-  
 
-    // preprocess + at start of string
-    std:: wregex reg54(L"(^\\+)", rx_);   
-    ws = std:: regex_replace(ws, reg54,L"");
+  while (wsOld != ws) 
+  {
+    wsOld = ws;
 
-    // // delimit unary - for - follow by numbers or functions
-    std:: wregex reg55(L"(^|[^[:digit:]eEn)!])(-)", rx_);   
-    ws = std:: regex_replace(ws, reg55,L"$1" + std::wstring{prefixNeg_});
+    for (prepRule r : loopRun) 
+    {
+      ws = std::regex_replace(ws, r.reg, r.rep);
+    }
+  }
+
+  for (prepRule r : postRun) 
+  {
+    ws = std::regex_replace(ws, r.reg, r.rep);
+  }
+
   
-  
-    std::wcout << ws << std::endl;
+    // std::wcout << ws << std::endl;
   
   //----------------------------
   // need to insert errors e.g. .n or 1. or /* etc.
@@ -86,56 +129,47 @@ std::wstring iamath::calcInSingle::preprocess(const std::wstring& input) const{
 
 // ***Tokenize the preprocessed string***
 //
-std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& input) const{
+std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) const
+{
   std::vector<std::wstring> tokens{};
   std::wstring temp{};
-  bool bNegNumber{false};
+  wchar_t var{L'n'};
 
-  for (wchar_t c : input) {
-
-    if ((std::isdigit(c) || c == L'.') || bNegNumber == true && (std::isdigit(c) || c == L'.' || (operatorMapFunc_.find(c) != operatorMapFunc_.end()))) {  // normal or negative number
+  for (wchar_t c : input) 
+  {
+    if ((std::isdigit(c) || c == L'.' || c == L'e' || c == L'E')) 
+    {  
       temp += c;
     }
-    else if (c == prefixNeg_ && !bNegNumber) {
-      temp += prefixNeg_;
-      bNegNumber = true;
-      continue;
+    else if (!temp.empty() && (temp.back() == L'e' || temp.back() == L'E')) { // case for negative exponents
+      temp += c;
     }
-    else if (c == prefixNeg_ && bNegNumber) {
-      tokens.push_back(temp);
-      temp = prefixNeg_;
-    }
-
-    else if (c == var1_) {  
-
-      if (temp != L"") {
+    else if (c == var) 
+    {
+      if (temp != L"") 
+      {
         tokens.push_back(temp);
         temp = L"";
-        bNegNumber = false;
       }
-      temp += var1_;
-      tokens.push_back(temp);
-      temp = L"";
-       
+      tokens.push_back(std::wstring{var});
     }
-
-    else if (operatorMap_.find(c) != operatorMap_.end()) {
-      if (temp != L"") {
+    else if (operatorMap_.find(c) != operatorMap_.end()) 
+    {
+      if (temp != L"") 
+      {
         tokens.push_back(temp);
         temp = L"";
-        bNegNumber = false;
       }
-
       tokens.push_back(std::wstring{c});
     }
-    else {
+    else 
+    {
       continue;
     }
   }
 
   if (temp != L"") {
     tokens.push_back(temp);
-    bNegNumber = false;
   }
   // for (std::wstring s : tokens) {
   //   std::wcout << s << std::endl;
@@ -147,7 +181,8 @@ std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& inp
 
 // ***Convert to reverse polish notation RPN***
 //
- std::deque<std::wstring> iamath::calcInSingle::convertRPN(const std::vector<std::wstring>& input) const{
+ std::deque<std::wstring> iamath::baseCalc::convertRPN(const std::vector<std::wstring>& input) const
+{
 
   stOpRpn newOp{};
   wchar_t op{};
@@ -156,65 +191,56 @@ std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& inp
   std::deque<std::wstring> symbolQueue{};  
 
   //regex expressions to catch e.g. unary minus on digits or functions
-  std::wregex regOnDigit(L"([[:digit:]]|" + std::wstring{var1_} + L")");
-  std::wregex regOnFunction(LR"(([^[:digit:]|\(\)]))");
+  std::wregex regOnDigit(L"[[:digit:]n]");
 
-  bool unaryOnFunction{false};
-
-
-  for (std::wstring t : input) {
-
-    if (std::regex_search(t, regOnDigit)) {
-      if (t.front() == L'#') {
-        t.erase(t.begin());
-        symbolQueue.push_back(t);
-        symbolQueue.push_back(L"N");
-        }
-      else{
-        symbolQueue.push_back(t);
-      }
+  for (std::wstring t : input) 
+  {
+    if (std::regex_search(t, regOnDigit)) 
+    {
+      symbolQueue.push_back(t);
     } 
-    else if (operatorMapFunc_.find(t.back()) != operatorMapFunc_.end()) {  //right associative function
-      if (t.front() == L'#') {
-        functionStack.push(stRightAssocFunc{t.back(), true, 0});  //negate function result
-      }
-      else{
-        functionStack.push(stRightAssocFunc{t.back(), false, 0}); //dont negate function result
-      }
+    else if (operatorMapFunc_.find(t.back()) != operatorMapFunc_.end()) 
+    {  //right associative function
+      functionStack.push(stRightAssocFunc{t.back(), 0}); //dont negate function result
     }
-    else if (t.front() == L')') {
-
-      while (operatorStack.top().op != L'(' && operatorStack.size() != 0) {
+    else if (t.front() == L')') 
+    {
+      while (operatorStack.top().op != L'(' && operatorStack.size() != 0) 
+      {
         symbolQueue.push_back(std::wstring{operatorStack.top().op});
         operatorStack.pop();
       }
 
       operatorStack.pop();  //pop right parenthesis
 
-      if (!functionStack.empty() && functionStack.top().parentCount == 1) {  //check for r.a. func on func stack. If so, add the func after the closing parenthesis was found
+      if (!functionStack.empty() && functionStack.top().parentCount == 1) 
+      {  //check for r.a. func on func stack. If so, add the func after the closing parenthesis was found
         symbolQueue.push_back(std::wstring{functionStack.top().func});
-        if (functionStack.top().negateFunc) {
-          symbolQueue.push_back(L"N");
-        }
         functionStack.pop();
       }
-      else if(!functionStack.empty()){
+      else if(!functionStack.empty())
+      {
         functionStack.top().parentCount--;
       }
     }
-    else if (operatorMap_.find(t.back()) != operatorMap_.end()) {
+    else if (operatorMap_.find(t.back()) != operatorMap_.end()) 
+    {
       newOp.op = t.back();
       newOp.prio = operatorMap_.at(newOp.op);
       
-      if (newOp.op == L'(' && !functionStack.empty()) {
+      if (newOp.op == L'(' && !functionStack.empty()) 
+      {
         functionStack.top().parentCount++;
       }
 
-      if (operatorStack.top().prio < newOp.prio) {
+      if (operatorStack.top().prio < newOp.prio) 
+      {
         operatorStack.push(newOp);
       }
-      else{
-        while (operatorStack.top().prio >= newOp.prio && operatorStack.top().op != L'(') {
+      else
+      {
+        while (operatorStack.top().prio >= newOp.prio && operatorStack.top().op != L'(') 
+        {
           symbolQueue.push_back(std::wstring{operatorStack.top().op});
           operatorStack.pop();
         }
@@ -226,13 +252,14 @@ std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& inp
   }
 
 
-  while (operatorStack.top().op != L'0') {
+  while (operatorStack.top().op != L'0') 
+  {
       symbolQueue.push_back(std::wstring{operatorStack.top().op});
       operatorStack.pop();
     }
 
   // for (std::wstring w : symbolQueue) {
-  //   std::wcout<<w;
+  //   std::wcout<<w<<" ";
   //
   // }
   //   std::wcout<<std::endl;
@@ -243,21 +270,26 @@ std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& inp
 
 
 // ***Evaluate RPN***
-double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const{
+double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const
+{
   std::stack<double> operandStack{};
   double val1{}, val2{}, result{};
+  wchar_t prefixNeg{L'#'}, var{L'n'};
 
-  std::wregex regOnDigit(LR"([[:digit:]|n])");
-  std::wregex regOnOpFunc(LR"([^[:digit:]|n])");
+  std::wregex regOnDigit(L"[[:digit:]]");
+  std::wregex regOnOpFunc(L"[^[:digit:]]");
 
-  while (!queue.empty()) {
-    if (std::regex_search(queue.front(), regOnDigit)) {
+  while (!queue.empty()) 
+  {
+    if (std::regex_search(queue.front(), regOnDigit)) 
+    {
       operandStack.push(std::stod(queue.front()));
       queue.pop_front();
     }
-    else if (std::regex_search(queue.front(), regOnOpFunc)) {
-
-      switch (queue.front().back()) { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+    else if (std::regex_search(queue.front(), regOnOpFunc)) 
+    {
+      switch (queue.front().back()) 
+      { // get the "last" character of the wstring(queue element) which converts it to int... nice one
         case L'N':{
                     val1 = operandStack.top();
                     operandStack.pop();
@@ -354,6 +386,7 @@ double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const{
                   }
         default:  {
                     std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                    return 0;
                   }
       }
         queue.pop_front();
@@ -368,28 +401,34 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
   std::stack<double> operandStack{};
   std::vector<double> resultVec{};
   std::deque<std::wstring> orgQueue{queue};
+  wchar_t prefixNeg{L'#'}, var{L'n'};
   
   double val1{}, val2{}, result{};
 
-  std::wregex regOnDigit(LR"([[:digit:]|n])");
-  std::wregex regOnOpFunc(LR"([^[:digit:]|n])");
+  std::wregex regOnDigit(L"[[:digit:]n]");
+  std::wregex regOnOpFunc(L"[^[:digit:]n]");
 
-  for (int n = start; n <=end; n+= inc) {
+  for (int n = start; n <=end; n+= inc) 
+  {
     queue = orgQueue;
   
     while (!queue.empty()) {
       //check if queue front is variable
-      if (queue.front() == std::wstring{var1_}) {
+      if (queue.front() == std::wstring{var}) 
+      {
         queue.pop_front();
         queue.push_front(std::to_wstring(n));
       }
-      if (std::regex_search(queue.front(), regOnDigit)) {
+      if (std::regex_search(queue.front(), regOnDigit)) 
+      {
         operandStack.push(std::stod(queue.front()));
         queue.pop_front();
       }
-      else if (std::regex_search(queue.front(), regOnOpFunc)) {
+      else if (std::regex_search(queue.front(), regOnOpFunc)) 
+      {
 
-        switch (queue.front().back()) { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+        switch (queue.front().back()) 
+        { // get the "last" character of the wstring(queue element) which converts it to int... nice one
           case L'N':{
                       val1 = operandStack.top();
                       operandStack.pop();
@@ -500,22 +539,18 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
 }
 
 
-double iamath::calcInSingle::factorial(double value) const{
-  double result{1.0};
+double iamath::baseCalc::factorial(int value) const
+{
+  if (value<=0) 
+  {
+    return 0.0;
+  }
 
-  while (value >= 1) {
+  double result{1.0};
+  while (value >= 1) 
+  {
     result *= value;
     value--;
   }
   return result;
 }
-
-
-
-
-
-
-
-
-
-

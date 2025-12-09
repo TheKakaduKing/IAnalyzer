@@ -2,17 +2,20 @@
 #include "iamath.hpp"
 #include <iostream>
 #include <string>
+#include <vector>
 
 
 // Main code
 int main(){
   renderGLFWWindow(); 
-  std::string a = "-20.0(-9.0+2)/s(5^2)*2!+-1.4*-sin(-58)*cos(1)+tan(-3)";
+  // std::string a = "-(2.0E1+3)(-9.0+2)/s(5^2)*2!+-1.4*-sin(-1.0e-1)*cos(1)+tan(-3)";
+  std::string a = "5+1.0e3-4";
   std::wstring b = L"4n+2";
 
-  // double b = stringHandler{a};
-  // std::wcout << iamath::calcInSingle{a} << std::endl;
-  // std::vector<double> c = iamath::calcInSeq{b, 0, 10, 1};
+
+  // double c = iamath::calcInSingle{a};
+  // std::wcout << iamath::calcInSingle(a) << std::endl;
+  // std::vector<double> d = iamath::calcInSeq{b, 0,100,1};
 }
 
 

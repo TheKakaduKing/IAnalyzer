@@ -1,13 +1,14 @@
 #pragma once
-#include "imgui/imgui_internal.h"
 #include <concepts>
 #include <string>
 #include <vector>
 #include <deque>
 #include <regex>
 #include <unordered_map>
+#include <iostream>
 
 namespace iamath{
+  class baseCalc;
   class calcInSingle;
   class calcInSeq;
 }
@@ -16,66 +17,42 @@ namespace iamath{
 template <typename T>
 concept supported_input = std::same_as<T, std::string> || std::same_as<T, std::wstring>;
 
+struct prepRule{
+  std::wregex reg;
+  std::wstring rep;
+};
+
 struct stOpRpn{
   wchar_t op;
   int prio;
 };
 
-struct stEval{
-  double val;
-  wchar_t op;
-};
-
 struct stRightAssocFunc{
   wchar_t func;
-  bool negateFunc;
   int parentCount;  //parenth. counter for nested functions and parenth.
 };
 
 
-class iamath::calcInSingle{
-
-  public:
-    template <supported_input T>
-      calcInSingle(T& input)
-      {
-        resultSingle_ = calculate(input);
-      }
+class iamath::baseCalc{
 
   protected:
-    calcInSingle(){}
-
-  public:
-    operator double() &&{
-      return resultSingle_;
-    }
+    baseCalc(){}
 
     //Delete copy constructor/assignment as there is no usecase for this class
-    calcInSingle(calcInSingle&) = delete;
-    calcInSingle operator=(calcInSingle&) = delete;
+    baseCalc(baseCalc&) = delete;
+    baseCalc operator=(baseCalc&) = delete;
 
     //Delete move constructor/assignment as there is no usecase for this class
-    calcInSingle(calcInSingle&&) = delete;
-    calcInSingle operator=(calcInSingle&&) = delete;
+    baseCalc(baseCalc&&) = delete;
+    baseCalc operator=(baseCalc&&) = delete;
 
   protected:
-    template<supported_input T>
-    inline double calculate(const T& input) const;
     std::wstring preprocess(const std::wstring& inputWstring) const;
     std::vector<std::wstring> tokenize(const std::wstring& inputWstring) const;   
     std::deque<std::wstring> convertRPN(const std::vector<std::wstring>& inputTokens) const;
-    double evalRPN(std::deque<std::wstring>& queue) const;
-    double factorial(double value) const;
-
-    private:
-    template<supported_input T>
-      inline std::vector<double> calculate(const T& input) const;
+    double factorial(int value) const;
 
   protected:
-    wchar_t var1_{L'n'};
-    wchar_t prefixNeg_{L'#'};
-    double resultSingle_{};
-    static constexpr std::regex_constants::syntax_option_type rx_ = std::regex_constants::extended; // To use regex extended syntax (Posix ERE)
 
     static inline const std::unordered_map<wchar_t, int>  operatorMap_{
       {L'+', 1}, {L'-', 1}, {L'*', 2}, {L'/', 2},
@@ -86,7 +63,7 @@ class iamath::calcInSingle{
       {L'§', 3}, // tan
       {L'!', 4}, // factorial
       {L'$', 4}, // log
-      {L'N', 4}, // factorial
+      {L'N', 4}, // negate (unary minus)
       {L'(', 5}, {L')', 5}};
 
     static inline const std::unordered_map<wchar_t, int>  operatorMapFunc_{
@@ -98,13 +75,44 @@ class iamath::calcInSingle{
       {L'$', 4}}; // log
 };
 
+class iamath::calcInSingle : public iamath::baseCalc{
 
-class iamath::calcInSeq : public iamath::calcInSingle{
   public:
+    template <supported_input T>
+      calcInSingle(T& input)
+      {
+        resultSingle_ = calculate(input);
+      }
 
+    //Delete copy constructor/assignment as there is no usecase for this class
+    calcInSingle(calcInSingle&) = delete;
+    calcInSingle operator=(calcInSingle&) = delete;
+
+    //Delete move constructor/assignment as there is no usecase for this class
+    calcInSingle(calcInSingle&&) = delete;
+    calcInSingle operator=(calcInSingle&&) = delete;
+
+  public:
+    operator double() &&{
+      return resultSingle_;
+    }
+
+  protected:
+    template<supported_input T>
+    inline double calculate(const T& input) const;
+    double evalRPN(std::deque<std::wstring>& queue) const;
+
+  private:
+    double resultSingle_{};
+};
+
+
+class iamath::calcInSeq : public iamath::baseCalc{
+
+  public:
     template <supported_input T>
       calcInSeq(T& input, int start, int end, int inc):
-        iamath::calcInSingle{}
+        iamath::baseCalc{}
       {
         resultSeq_ = calculate(input, start, end, inc);
       }
@@ -122,16 +130,13 @@ class iamath::calcInSeq : public iamath::calcInSingle{
       return resultSeq_;
     }
 
-  protected:
-    wchar_t var1_{L'n'};
-    std::vector<double> resultSeq_{};
-    std::vector<double> evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const;
-
   private:
     template<supported_input T>
     inline std::vector<double> calculate(const T& input,  int start, int end, int inc) const;
+    std::vector<double> evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const;
 
-  protected:
+  private:
+    std::vector<double> resultSeq_{};
 
 };
 
@@ -152,10 +157,10 @@ inline double iamath::calcInSingle::calculate(const T& input) const{
     tempStr = input;
   }
 
-  std::wstring prepString = preprocess(tempStr);
-  std::vector<std::wstring> tokens = tokenize(prepString);
-  std::deque<std::wstring> rpn = convertRPN(tokens);
-  double result = evalRPN(rpn);
+  std::wstring prepString = baseCalc::preprocess(tempStr);
+  std::vector<std::wstring> tokens = baseCalc::tokenize(prepString);
+  std::deque<std::wstring> rpn = baseCalc::convertRPN(tokens);
+  double result = calcInSingle::evalRPN(rpn);
 
   return result;
 }
@@ -174,10 +179,10 @@ inline std::vector<double> iamath::calcInSeq::calculate(const T& input, int star
     tempStr = input;
   }
 
-  std::wstring prepString = preprocess(tempStr);
-  std::vector<std::wstring> tokens = tokenize(prepString);
-  std::deque<std::wstring> rpn = convertRPN(tokens);
-  std::vector<double> result = evalRPN(rpn, start, end, inc);
+  std::wstring prepString = baseCalc::preprocess(tempStr);
+  std::vector<std::wstring> tokens = baseCalc::tokenize(prepString);
+  std::deque<std::wstring> rpn = baseCalc::convertRPN(tokens);
+  std::vector<double> result = calcInSeq::evalRPN(rpn, start, end, inc);
 
   return result;
 }
