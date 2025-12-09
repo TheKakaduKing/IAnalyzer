@@ -20,7 +20,7 @@ add_executable(${PROJECT_NAME}
     src/analyzer2.cpp
     src/analyzer3.cpp
     src/analyzer4.cpp
-    src/stringHandler.cpp
+    src/iamath.cpp
 
     include/imgui/imgui.cpp
     include/imgui/imgui_demo.cpp

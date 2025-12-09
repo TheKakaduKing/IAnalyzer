@@ -1,4 +1,4 @@
-#include "stringHandler.hpp"
+#include "iamath.hpp"
 #include <cmath>
 #include <deque>
 #include <stack>
@@ -9,11 +9,9 @@
 #include <regex>
 
 
-
-
 // ***Preprocess the given string***
 //
-std::wstring stringHandler::preprocess(const std::wstring& input) const{
+std::wstring iamath::calcInSingle::preprocess(const std::wstring& input) const{
 
   std::wstring ws{input};
   std::wstring wsOld{};
@@ -88,7 +86,7 @@ std::wstring stringHandler::preprocess(const std::wstring& input) const{
 
 // ***Tokenize the preprocessed string***
 //
-std::vector<std::wstring> stringHandler::tokenize(const std::wstring& input) const{
+std::vector<std::wstring> iamath::calcInSingle::tokenize(const std::wstring& input) const{
   std::vector<std::wstring> tokens{};
   std::wstring temp{};
   bool bNegNumber{false};
@@ -149,7 +147,7 @@ std::vector<std::wstring> stringHandler::tokenize(const std::wstring& input) con
 
 // ***Convert to reverse polish notation RPN***
 //
- std::deque<std::wstring> stringHandler::convertRPN(const std::vector<std::wstring>& input) const{
+ std::deque<std::wstring> iamath::calcInSingle::convertRPN(const std::vector<std::wstring>& input) const{
 
   stOpRpn newOp{};
   wchar_t op{};
@@ -245,7 +243,7 @@ std::vector<std::wstring> stringHandler::tokenize(const std::wstring& input) con
 
 
 // ***Evaluate RPN***
-double stringHandler::evalRPN(std::deque<std::wstring>& queue) const{
+double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const{
   std::stack<double> operandStack{};
   double val1{}, val2{}, result{};
 
@@ -366,7 +364,7 @@ double stringHandler::evalRPN(std::deque<std::wstring>& queue) const{
   return result;
 }
 
-std::vector<double> stringHandler::evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const{
+std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const{
   std::stack<double> operandStack{};
   std::vector<double> resultVec{};
   std::deque<std::wstring> orgQueue{queue};
@@ -384,8 +382,6 @@ std::vector<double> stringHandler::evalRPN(std::deque<std::wstring> queue, int s
       if (queue.front() == std::wstring{var1_}) {
         queue.pop_front();
         queue.push_front(std::to_wstring(n));
-        std::wcout << "front popped" << std::endl;
-      
       }
       if (std::regex_search(queue.front(), regOnDigit)) {
         operandStack.push(std::stod(queue.front()));
@@ -496,7 +492,6 @@ std::vector<double> stringHandler::evalRPN(std::deque<std::wstring> queue, int s
       }
     }
     resultVec.push_back(operandStack.top());
-    std::wcout << "operand stack size: " << operandStack.size() << std::endl;
     operandStack.pop();
   }
 
@@ -505,7 +500,7 @@ std::vector<double> stringHandler::evalRPN(std::deque<std::wstring> queue, int s
 }
 
 
-double stringHandler::factorial(double value) const{
+double iamath::calcInSingle::factorial(double value) const{
   double result{1.0};
 
   while (value >= 1) {

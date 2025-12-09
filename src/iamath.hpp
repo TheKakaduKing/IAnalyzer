@@ -1,10 +1,17 @@
 #pragma once
+#include "imgui/imgui_internal.h"
 #include <concepts>
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <deque>
 #include <regex>
-#include <iostream>
+#include <unordered_map>
+
+namespace iamath{
+  class calcInSingle;
+  class calcInSeq;
+}
+
 
 template <typename T>
 concept supported_input = std::same_as<T, std::string> || std::same_as<T, std::wstring>;
@@ -26,46 +33,48 @@ struct stRightAssocFunc{
 };
 
 
-class stringHandler{
+class iamath::calcInSingle{
+
   public:
     template <supported_input T>
-    explicit stringHandler(T& input);
-    template <supported_input T>
-    explicit stringHandler(T& input, wchar_t variable, int start, int end, int inc);
+      calcInSingle(T& input)
+      {
+        resultSingle_ = calculate(input);
+      }
 
-    //Delete copy constructor/assignment as there is no usecase for this class
-    stringHandler(stringHandler&) = delete;
-    stringHandler operator=(stringHandler&) = delete;
+  protected:
+    calcInSingle(){}
 
-    //Delete move constructor/assignment as there is no usecase for this class
-    stringHandler(stringHandler&&) = delete;
-    double operator=(stringHandler&&) = delete;
-
-
+  public:
     operator double() &&{
       return resultSingle_;
     }
-    operator std::vector<double>() &&{
-      return resultMulti_;
-    }
 
-  private:
+    //Delete copy constructor/assignment as there is no usecase for this class
+    calcInSingle(calcInSingle&) = delete;
+    calcInSingle operator=(calcInSingle&) = delete;
+
+    //Delete move constructor/assignment as there is no usecase for this class
+    calcInSingle(calcInSingle&&) = delete;
+    calcInSingle operator=(calcInSingle&&) = delete;
+
+  protected:
     template<supported_input T>
     inline double calculate(const T& input) const;
-    template<supported_input T>
-    inline std::vector<double> calculate(const T& input,  int start, int end, int inc) const;
     std::wstring preprocess(const std::wstring& inputWstring) const;
     std::vector<std::wstring> tokenize(const std::wstring& inputWstring) const;   
     std::deque<std::wstring> convertRPN(const std::vector<std::wstring>& inputTokens) const;
     double evalRPN(std::deque<std::wstring>& queue) const;
-    std::vector<double> evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const;
     double factorial(double value) const;
 
-  private:
+    private:
+    template<supported_input T>
+      inline std::vector<double> calculate(const T& input) const;
+
+  protected:
     wchar_t var1_{L'n'};
     wchar_t prefixNeg_{L'#'};
     double resultSingle_{};
-    std::vector<double> resultMulti_{};
     static constexpr std::regex_constants::syntax_option_type rx_ = std::regex_constants::extended; // To use regex extended syntax (Posix ERE)
 
     static inline const std::unordered_map<wchar_t, int>  operatorMap_{
@@ -90,21 +99,47 @@ class stringHandler{
 };
 
 
-template <supported_input T>
-stringHandler::stringHandler(T& input)
-{
-  resultSingle_ = calculate(input);
-}
+class iamath::calcInSeq : public iamath::calcInSingle{
+  public:
 
-template <supported_input T>
-stringHandler::stringHandler(T& input, wchar_t variable, int start, int end, int inc):
-  var1_{variable}
-{
-  resultMulti_ = calculate(input, start, end, inc);
-}
+    template <supported_input T>
+      calcInSeq(T& input, int start, int end, int inc):
+        iamath::calcInSingle{}
+      {
+        resultSeq_ = calculate(input, start, end, inc);
+      }
+
+    //Delete copy constructor/assignment as there is no usecase for this class
+    calcInSeq(calcInSeq&) = delete;
+    calcInSeq operator=(calcInSeq&) = delete;
+
+    //Delete move constructor/assignment as there is no usecase for this class
+    calcInSeq(calcInSeq&&) = delete;
+    calcInSeq operator=(calcInSeq&&) = delete;
+
+  public:
+    operator std::vector<double>() &&{
+      return resultSeq_;
+    }
+
+  protected:
+    wchar_t var1_{L'n'};
+    std::vector<double> resultSeq_{};
+    std::vector<double> evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const;
+
+  private:
+    template<supported_input T>
+    inline std::vector<double> calculate(const T& input,  int start, int end, int inc) const;
+
+  protected:
+
+};
+
+
+
 
 template<supported_input T>
-inline double stringHandler::calculate(const T& input) const{
+inline double iamath::calcInSingle::calculate(const T& input) const{
 
   std::wstring tempStr{};
   //Must be evaluated at compile time, therefore constexpr
@@ -126,7 +161,7 @@ inline double stringHandler::calculate(const T& input) const{
 }
 
 template<supported_input T>
-inline std::vector<double> stringHandler::calculate(const T& input, int start, int end, int inc) const{
+inline std::vector<double> iamath::calcInSeq::calculate(const T& input, int start, int end, int inc) const{
 
   std::wstring tempStr{};
   //Must be evaluated at compile time, therefore constexpr
