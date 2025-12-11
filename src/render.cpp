@@ -1,15 +1,10 @@
 #include "render.hpp"
-#include "analyzer1.hpp"
-#include "analyzer2.hpp"
-#include "analyzer3.hpp"
-#include "analyzer4.hpp"
-#include <iostream>
+#include "iawingman.hpp"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include "../include/imgui/imgui.h"
 #include "../include/imgui/imgui_impl_glfw.h"
 #include "../include/imgui/imgui_impl_opengl3.h"
 #include "implot/implot.h"
-
 
 
 static void glfw_error_callback(int error, const char* description)
@@ -61,7 +56,7 @@ int renderGLFWWindow()
 
     // Create window with graphics context
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    GLFWwindow* window = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale), "imguiAnalyzer", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(1920 * main_scale), (int)(1080 * main_scale), "imguiAnalyzer", nullptr, nullptr);
 
     if (window == nullptr)
         return 1;
@@ -106,6 +101,9 @@ int renderGLFWWindow()
     glfwGetWindowSize(window, &initWidth, &initHeight);
     initWindows(WindowPosSize, initWidth, initHeight);
 
+    //init sidepanels once
+    iawindow::wingman::instance().queueCreateWindow(iawindow::stWinInfo{iawindow::WINDOW_TYPE_SIDEPANEL_LEFT, ImVec2(400,400), ImVec2(300,300)});
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -137,20 +135,9 @@ int renderGLFWWindow()
 
         {
           //actual window
-          windowAnalyzer1(windowSize, windowPosition1);
         }
-        {
-          //actual window
-          windowAnalyzer2(windowSize, windowPosition2);
-        }
-        {
-          //actual window
-          windowAnalyzer3(windowSize, windowPosition3);
-        }
-        {
-          //actual window
-          windowAnalyzer4(windowSize, windowPosition4);
-        }
+
+        iawindow::wingman::instance().drawAll();
 
 
         // Rendering

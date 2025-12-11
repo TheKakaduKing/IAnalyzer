@@ -15,7 +15,19 @@ std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
 {
   static constexpr std::regex_constants::syntax_option_type rx{std::regex_constants::extended}; // To use regex extended syntax (Posix ERE)
 
-//-(2.0E1+3)n(-9.0+2)/s(5.0^2)*2!+-1.4*-sin(-1.0e-1)*cos(1)+tan(-3)
+
+  //check parenthesis count
+  int pCounter{0};
+  for (wchar_t c : input) {
+    if (c == L'(') {
+      pCounter++;
+    }else if (c == L')') {
+      pCounter--;
+    }
+  }
+  if (pCounter != 0) {
+    return L"";
+  }
 
   static const std::vector<prepRule> syntaxRun
   {
@@ -74,7 +86,7 @@ std::wstring iamath::baseCalc::preprocess(const std::wstring& input) const
 
   for (prepRule r : syntaxRun) {
     if(std::regex_search(ws, r.reg)){
-      return 0;
+      return L"";
     }
   
   }
@@ -162,6 +174,8 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
 
   stOpRpn newOp{};
   wchar_t op{};
+  bool error{false};
+  std::deque<std::wstring> errorReturn{};
   std::stack<stOpRpn> operatorStack{{stOpRpn{L'0',0}}};
   std::stack<stRightAssocFunc> functionStack{}; //function stack for nested right associative functions
   std::deque<std::wstring> symbolQueue{};  
@@ -181,13 +195,13 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
     }
     else if (t.front() == L')') 
     {
-      while (operatorStack.top().op != L'(' && operatorStack.size() != 0) 
+      while (!operatorStack.empty() && operatorStack.top().op != L'(') 
       {
         symbolQueue.push_back(std::wstring{operatorStack.top().op});
         operatorStack.pop();
       }
 
-      operatorStack.pop();  //pop right parenthesis
+      if (!operatorStack.empty()) {operatorStack.pop();} else{error = true; return errorReturn;}; //pop right parenthesis
 
       if (!functionStack.empty() && functionStack.top().parentCount == 1) 
       {  //check for r.a. func on func stack. If so, add the func after the closing parenthesis was found
@@ -209,13 +223,13 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
         functionStack.top().parentCount++;
       }
 
-      if (operatorStack.top().prio < newOp.prio) 
+      if (!operatorStack.empty() && operatorStack.top().prio < newOp.prio) 
       {
         operatorStack.push(newOp);
       }
       else
       {
-        while (operatorStack.top().prio >= newOp.prio && operatorStack.top().op != L'(') 
+        while (!operatorStack.empty() && operatorStack.top().prio >= newOp.prio && operatorStack.top().op != L'(') 
         {
           symbolQueue.push_back(std::wstring{operatorStack.top().op});
           operatorStack.pop();
@@ -228,7 +242,7 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
   }
 
 
-  while (operatorStack.top().op != L'0') 
+  while (!operatorStack.empty() && operatorStack.top().op != L'0') 
   {
       symbolQueue.push_back(std::wstring{operatorStack.top().op});
       operatorStack.pop();
@@ -240,7 +254,12 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
   // }
   //   std::wcout<<std::endl;
 
+  if (error) {
+    return errorReturn;
+  }
+  else {
   return symbolQueue;
+  }
 }
 
 
@@ -248,6 +267,8 @@ std::vector<std::wstring> iamath::baseCalc::tokenize(const std::wstring& input) 
 // ***Evaluate RPN***
 double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const
 {
+  bool error{false};
+  double errorReturn{0};
   std::stack<double> operandStack{};
   double val1{}, val2{}, result{};
   wchar_t prefixNeg{L'#'}, var{L'n'};
@@ -264,161 +285,12 @@ double iamath::calcInSingle::evalRPN(std::deque<std::wstring>& queue) const
     }
     else if (std::regex_search(queue.front(), regOnOpFunc)) 
     {
-      switch (queue.front().back()) 
-      { // get the "last" character of the wstring(queue element) which converts it to int... nice one
-        case L'N':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = 0.0 - val1;
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'+':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    val2 = operandStack.top();
-                    operandStack.pop();
-                    result = val2 + val1;
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'-':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    val2 = operandStack.top();
-                    operandStack.pop();
-                    result = val2 - val1;
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'*':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    val2 = operandStack.top();
-                    operandStack.pop();
-                    result = val2 * val1;
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'/':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    val2 = operandStack.top();
-                    operandStack.pop();
-                    result = val2 / val1;
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'&':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = sqrt(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'^':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    val2 = operandStack.top();
-                    operandStack.pop();
-                    result = pow(val2, val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'~':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = sin(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'@':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = cos(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'§':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = tan(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'$':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = log(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'€':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = log10(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        case L'!':{
-                    val1 = operandStack.top();
-                    operandStack.pop();
-                    result = factorial(val1);
-                    operandStack.push(result);
-                    break;
-                  }
-        default:  {
-                    std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
-                    return 0;
-                  }
-      }
-        queue.pop_front();
-    }
-  }
-  result = operandStack.top();
-
-  return result;
-}
-
-std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const{
-  std::stack<double> operandStack{};
-  std::vector<double> resultVec{};
-  std::deque<std::wstring> orgQueue{queue};
-  wchar_t prefixNeg{L'#'}, var{L'n'};
-  
-  double val1{}, val2{}, result{};
-
-  std::wregex regOnDigit(L"[[:digit:]n]");
-  std::wregex regOnOpFunc(L"[^[:digit:]n]");
-
-  for (int n = start; n <=end; n+= inc) 
-  {
-    queue = orgQueue;
-  
-    while (!queue.empty()) {
-      //check if queue front is variable
-      if (queue.front() == std::wstring{var}) 
-      {
-        queue.pop_front();
-        queue.push_front(std::to_wstring(n));
-      }
-      if (std::regex_search(queue.front(), regOnDigit)) 
-      {
-        operandStack.push(std::stod(queue.front()));
-        queue.pop_front();
-      }
-      else if (std::regex_search(queue.front(), regOnOpFunc)) 
-      {
-
+      if (operatorMapBinary_.find(queue.front().back()) != operatorMapBinary_.end()) {
+        if (!(operandStack.size() >= 2)) {
+          error = true; return errorReturn;
+        }
         switch (queue.front().back()) 
         { // get the "last" character of the wstring(queue element) which converts it to int... nice one
-          case L'N':{
-                      val1 = operandStack.top();
-                      operandStack.pop();
-                      result = 0.0 - val1;
-                      operandStack.push(result);
-                      break;
-                    }
           case L'+':{
                       val1 = operandStack.top();
                       operandStack.pop();
@@ -455,19 +327,39 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
                       operandStack.push(result);
                       break;
                     }
-          case L'&':{
-                      val1 = operandStack.top();
-                      operandStack.pop();
-                      result = sqrt(val1);
-                      operandStack.push(result);
-                      break;
-                    }
           case L'^':{
                       val1 = operandStack.top();
                       operandStack.pop();
                       val2 = operandStack.top();
                       operandStack.pop();
                       result = pow(val2, val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          default:  {
+                      std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                      return errorReturn;
+                    }
+        }
+      
+      }
+      else{
+        if (!(operandStack.size() >= 1)) {
+          error = true; return errorReturn;
+        }
+        switch (queue.front().back()) 
+        { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+          case L'N':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = 0.0 - val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'&':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = sqrt(val1);
                       operandStack.push(result);
                       break;
                     }
@@ -515,10 +407,185 @@ std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, i
                     }
           default:  {
                       std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                      return errorReturn;
                     }
         }
-          queue.pop_front();
+
       }
+        queue.pop_front();
+    }
+  }
+  if (operandStack.empty() || error) {
+    error = true;
+    return errorReturn;
+  }
+  else {
+    result = operandStack.top();
+  }
+
+  return result;
+}
+
+std::vector<double> iamath::calcInSeq::evalRPN(std::deque<std::wstring> queue, int start, int end, float inc) const{
+  bool error{false};
+  std::vector<double> errorReturn{};
+  std::stack<double> operandStack{};
+  std::vector<double> resultVec{};
+  std::deque<std::wstring> orgQueue{queue};
+  wchar_t prefixNeg{L'#'}, var{L'n'};
+  
+  double val1{}, val2{}, result{};
+
+  std::wregex regOnDigit(L"[[:digit:]n]");
+  std::wregex regOnOpFunc(L"[^[:digit:]n]");
+
+  for (int n = start; n <=end; n+= inc) 
+  {
+    queue = orgQueue;
+  
+    while (!queue.empty()) {
+      //check if queue front is variable
+      if (queue.front() == std::wstring{var}) 
+      {
+        queue.pop_front();
+        queue.push_front(std::to_wstring(n));
+      }
+      if (std::regex_search(queue.front(), regOnDigit)) 
+      {
+        operandStack.push(std::stod(queue.front()));
+        queue.pop_front();
+      }
+      else if (std::regex_search(queue.front(), regOnOpFunc)) 
+    {
+      if (operatorMapBinary_.find(queue.front().back()) != operatorMapBinary_.end()) {
+        if (!(operandStack.size() >= 2)) {
+          error = true; return errorReturn;
+        }
+        switch (queue.front().back()) 
+        { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+          case L'+':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 + val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'-':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 - val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'*':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 * val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'/':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = val2 / val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'^':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      val2 = operandStack.top();
+                      operandStack.pop();
+                      result = pow(val2, val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          default:  {
+                      std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                      return errorReturn;
+                    }
+        }
+      
+      }
+      else{
+        if (!(operandStack.size() >= 1)) {
+          error = true; return errorReturn;
+        }
+        switch (queue.front().back()) 
+        { // get the "last" character of the wstring(queue element) which converts it to int... nice one
+          case L'N':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = 0.0 - val1;
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'&':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = sqrt(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'~':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = sin(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'@':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = cos(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'§':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = tan(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'$':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = log(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'€':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = log10(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          case L'!':{
+                      val1 = operandStack.top();
+                      operandStack.pop();
+                      result = factorial(val1);
+                      operandStack.push(result);
+                      break;
+                    }
+          default:  {
+                      std::wcout<< "Couldnt find operator "<<queue.front()<<std::endl;
+                      return errorReturn;
+                    }
+        }
+
+      }
+        queue.pop_front();
+    }
     }
     resultVec.push_back(operandStack.top());
     operandStack.pop();

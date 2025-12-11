@@ -17,9 +17,7 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
     src/render.cpp
     src/analyzer1.cpp
-    src/analyzer2.cpp
-    src/analyzer3.cpp
-    src/analyzer4.cpp
+    src/iawingman.cpp
     src/iamath.cpp
 
     include/imgui/imgui.cpp

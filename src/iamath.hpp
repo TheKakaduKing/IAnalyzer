@@ -76,6 +76,10 @@ class iamath::baseCalc{
       {L'§', 3}, // tan
       {L'$', 4}, // ln
       {L'€', 4}}; // log10
+ 
+    static inline const std::unordered_map<wchar_t, int>  operatorMapBinary_{
+      // binary functions
+      {L'+', 1}, {L'-', 1}, {L'*', 2}, {L'/', 2}, {L'^', 3}};
 };
 
 class iamath::calcInSingle : public iamath::baseCalc{
@@ -161,6 +165,9 @@ inline double iamath::calcInSingle::calculate(const T& input) const{
   }
 
   std::wstring prepString = baseCalc::preprocess(tempStr);
+  if (prepString == L"") {
+    return 0;
+  }
   std::vector<std::wstring> tokens = baseCalc::tokenize(prepString);
   std::deque<std::wstring> rpn = baseCalc::convertRPN(tokens);
   double result = calcInSingle::evalRPN(rpn);
@@ -183,6 +190,9 @@ inline std::vector<double> iamath::calcInSeq::calculate(const T& input, int star
   }
 
   std::wstring prepString = baseCalc::preprocess(tempStr);
+  if (prepString == L"") {
+    return std::vector<double>{};
+  }
   std::vector<std::wstring> tokens = baseCalc::tokenize(prepString);
   std::deque<std::wstring> rpn = baseCalc::convertRPN(tokens);
   std::vector<double> result = calcInSeq::evalRPN(rpn, start, end, inc);
