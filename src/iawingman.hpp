@@ -1,16 +1,14 @@
 // wingman window manager for all windows visible inside GLFW
 #pragma once
-#include <atomic>
 #include <memory>
-#include <ostream>
 #include <queue>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 #include "imgui/imgui.h"
 #include <string>
 #include <vector>
 #include <iostream>
+#include "../include/implot/implot.h"
 
 namespace iawindow{
   class wingman;
@@ -18,6 +16,7 @@ namespace iawindow{
   class sPanLeft;
   class sPanRight;
   class seqPlot;
+  class activeThreads;
   struct stWinInfo;
   enum windowType {
     WINDOW_TYPE_NONE = 0,
@@ -26,6 +25,7 @@ namespace iawindow{
     WINDOW_TYPE_SIDEPANEL_TOP = 30,
     WINDOW_TYPE_SIDEPANEL_BOTTOM = 40,
     WINDOW_TYPE_SEQUENCE_PLOT = 100,
+    WINDOW_TYPE_ACTIVE_THREADS = 1000,
     };
 }
 
@@ -36,11 +36,12 @@ struct iawindow::stWinInfo{
 };
 
 //*************************************************************************************************
-//                      Wingman window manager class
+//                      Wingman class
 //*************************************************************************************************
 
 class iawindow::wingman{
   public:
+    // --Create an instance once that gets worked on
     static wingman& instance(){
       static wingman inst{};
       return inst;
@@ -64,8 +65,6 @@ class iawindow::wingman{
     static inline int destroyWindow();
     static inline int preDraw();
 
-    static inline iawindow::windowType getType(const std::shared_ptr<iawindow::window>& t);
-
 };
 
 
@@ -76,10 +75,14 @@ class iawindow::wingman{
 
 class iawindow::window{
   public:
-  window(int id, windowType type, bool show, std::string name, ImVec2 size, ImVec2 pos);
-  virtual ~window() = default;
+    window(int id, windowType type, bool show, std::string name, ImVec2 size, ImVec2 pos):
+      id_{id}, type_{type}, show_{show}, name_{name}, size_(size), pos_(pos){}
 
-  virtual int showWindow() = 0;
+    // --Need virtual base class destructor, otherwise the dervied objects destructor 
+    // --will not be called when the SharedPointer of the window is erased from the voector
+    virtual ~window() = default;
+
+    virtual int showWindow() = 0;
 
   public:
     const int id_{0};
@@ -88,15 +91,14 @@ class iawindow::window{
     const std::string name_;
     const ImVec2 size_{400,400};
     const ImVec2 pos_{300,300};
+    bool threadActive_{false};
 
-  protected:
-    std::thread worker;
-    std::atomic<bool> workerRunning{false};
+
 };
 
 
 //*************************************************************************************************
-//                      Sidepanel left window
+//                      Sidepanel left class
 //*************************************************************************************************
 
 class iawindow::sPanLeft :public window{
@@ -105,12 +107,13 @@ class iawindow::sPanLeft :public window{
       window{id, type, show, name, size, pos}
       {};
 
-  int showWindow() override;
+  private:
+    int showWindow() override;
 };
 
 
 //*************************************************************************************************
-//                      Sequence plot window
+//                      Sequence plot class
 //*************************************************************************************************
 
 class iawindow::seqPlot :public window{
@@ -123,26 +126,55 @@ class iawindow::seqPlot :public window{
   std::string func_{};
   char function_[128]{""};
   float limitX_{50}, limitY_{50};
-  bool newPlot_{false};
   int start_{0}, end_{100}, inc_{1};
   std::vector<double> valuesX_{}, valuesY_{};
 
-  int showWindow() override;
+  private:
+    int showWindow() override;
+    void fillValues(std::string func, int start, int end, int inc);
+    void onClose();
+
+  public:
+    ~seqPlot(){
+      onClose();
+    }
+
 };
 
 
+//*************************************************************************************************
+//                      Active threads class
+//*************************************************************************************************
+
+class iawindow::activeThreads :public window{
+  public:
+    activeThreads(int id, windowType type, bool show, std::string name, ImVec2 size, ImVec2 pos):
+      window{id, type, show, name, size, pos}
+      {};
+
+  private:
+    int showWindow() override;
+
+  private:
+    std::vector<int> threads_{};
+};
 
 //*************************************************************************************************
-//                      Wingman member declaration
+//                      Wingman class member declaration
 //*************************************************************************************************
 
-
+// ***Member function***
+// --Queue a new window in a window queue 
+//
 inline int iawindow::wingman::queueCreateWindow(const stWinInfo& winInfo){
   windowCreateQueue_.push(winInfo);
   return 0;
 }
 
 
+// ***Member function***
+// --Create a new window based on the window type 
+//
 inline int iawindow::wingman::createWindow(){
   stWinInfo current{};
   while (!windowCreateQueue_.empty()) {
@@ -167,6 +199,10 @@ inline int iawindow::wingman::createWindow(){
             windows_.push_back(std::make_shared<iawindow::seqPlot>(idCounter_,current.type,true,"Sequence plotter##" + std::to_string(idCounter_),current.size,current.pos));
             break;
           } 
+        case WINDOW_TYPE_ACTIVE_THREADS:{
+            windows_.push_back(std::make_shared<iawindow::activeThreads>(idCounter_,current.type,true,"Active Threads##" + std::to_string(idCounter_),current.size,current.pos));
+            break;
+          } 
         default:{
                   return 1;
                 }
@@ -180,11 +216,19 @@ inline int iawindow::wingman::createWindow(){
   return 0;
 }
 
+
+// ***Member function***
+// --Queue a window to be destroyed 
+//
 inline int iawindow::wingman::queueDestroyWindow(int id){
   windowDestroyQueue_.push(id);
   return 0;
 }
 
+
+// ***Member function***
+// --Destroy all windows in the window destroy queue 
+//
 inline int iawindow::wingman::destroyWindow(){
   while (!windowDestroyQueue_.empty()) {
     std::erase_if(windows_, [&](auto &w){return w->id_ == windowDestroyQueue_.front();});
@@ -193,6 +237,10 @@ inline int iawindow::wingman::destroyWindow(){
   return 0;
 }
 
+
+// ***Member function***
+// --Execute code before drawing all windows
+//
 inline int iawindow::wingman::preDraw(){
   destroyWindow();
   createWindow();
@@ -201,6 +249,10 @@ inline int iawindow::wingman::preDraw(){
 }
 
 
+
+// ***Member function***
+// --Draw all windows stored in the windows vector
+//
 inline int iawindow::wingman::drawAll(){
   preDraw();
   for (std::shared_ptr<iawindow::window>& w : windows_) {
@@ -208,8 +260,3 @@ inline int iawindow::wingman::drawAll(){
   }
   return 0;
 }
-
-
-// inline iawindow::windowType iawindow::wingman::getType(const std::shared_ptr<iawindow::window>& t){
-//   // return &t.type_;
-// }

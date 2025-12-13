@@ -34,6 +34,12 @@ struct stRightAssocFunc{
 };
 
 
+//*************************************************************************************************
+//                      Base calculation class
+//*************************************************************************************************
+//  --derives into subclasses, base class only
+//
+
 class iamath::baseCalc{
 
   protected:
@@ -82,6 +88,13 @@ class iamath::baseCalc{
       {L'+', 1}, {L'-', 1}, {L'*', 2}, {L'/', 2}, {L'^', 3}};
 };
 
+
+//*************************************************************************************************
+//                      Single calculation class
+//*************************************************************************************************
+//  --Calculates a single string or wstring input
+//
+
 class iamath::calcInSingle : public iamath::baseCalc{
 
   public:
@@ -104,7 +117,7 @@ class iamath::calcInSingle : public iamath::baseCalc{
       return resultSingle_;
     }
 
-  protected:
+  private:
     template<supported_input T>
     inline double calculate(const T& input) const;
     double evalRPN(std::deque<std::wstring>& queue) const;
@@ -113,6 +126,11 @@ class iamath::calcInSingle : public iamath::baseCalc{
     double resultSingle_{};
 };
 
+
+//*************************************************************************************************
+//                      Sequence calculation class
+//*************************************************************************************************
+//  --Calculates a sequence of values, based on given input string or wstring, start, end, and increment
 
 class iamath::calcInSeq : public iamath::baseCalc{
 
@@ -149,7 +167,13 @@ class iamath::calcInSeq : public iamath::baseCalc{
 
 
 
+//*************************************************************************************************
+//                      Single calculation class member declaration
+//*************************************************************************************************
 
+// ***Member function***
+// --Call the member functions to calculate a single result and return it
+//
 template<supported_input T>
 inline double iamath::calcInSingle::calculate(const T& input) const{
 
@@ -175,6 +199,15 @@ inline double iamath::calcInSingle::calculate(const T& input) const{
   return result;
 }
 
+
+
+//*************************************************************************************************
+//                      Sequence calculation class member declaration
+//*************************************************************************************************
+
+// ***Member function***
+// --Call the member functions to calculate results and return result vector 
+//
 template<supported_input T>
 inline std::vector<double> iamath::calcInSeq::calculate(const T& input, int start, int end, int inc) const{
 

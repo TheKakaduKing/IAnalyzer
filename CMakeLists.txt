@@ -16,9 +16,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/render.cpp
-    src/analyzer1.cpp
     src/iawingman.cpp
     src/iamath.cpp
+    src/iathread.cpp
+
 
     include/imgui/imgui.cpp
     include/imgui/imgui_demo.cpp

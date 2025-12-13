@@ -73,6 +73,7 @@ int renderGLFWWindow()
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     //
     // Setup ImPlot context
+    
     ImPlot::CreateContext();
 
     // Setup Dear ImGui style
@@ -103,7 +104,6 @@ int renderGLFWWindow()
 
     //init sidepanels once
     iawindow::wingman::instance().queueCreateWindow(iawindow::stWinInfo{iawindow::WINDOW_TYPE_SIDEPANEL_LEFT, ImVec2(400,400), ImVec2(300,300)});
-
 
     while (!glfwWindowShouldClose(window))
     {
@@ -138,6 +138,7 @@ int renderGLFWWindow()
         }
 
         iawindow::wingman::instance().drawAll();
+        ImGui::ShowMetricsWindow();
 
 
         // Rendering
@@ -153,6 +154,8 @@ int renderGLFWWindow()
     }
 
     glfwMakeContextCurrent(window);
+
+
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
